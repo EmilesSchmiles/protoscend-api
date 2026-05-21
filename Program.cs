@@ -29,9 +29,9 @@ namespace Protoscend.Api
                             "https://localhost:7094",   // Blazor WASM HTTPS
                             "http://localhost:5084",    // Blazor WASM HTTP
                             "https://localhost:7049",   // API self (just in case)
-                            "https://localhost:5001",
-                            "http://localhost:5000",
-                            "https://protoscend.co.za"
+                            "https://protoscend.com",        // your actual domain
+                            "https://www.protoscend.com",    // www version too
+                            "https://protoscend.co.za"       // keep if you also own this
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod();
@@ -43,7 +43,10 @@ namespace Protoscend.Api
             if (app.Environment.IsDevelopment())
                 app.MapOpenApi();
 
-            app.UseHttpsRedirection();
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseCors("BlazorClient");
 
             app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config) =>
