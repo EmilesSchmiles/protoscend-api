@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Protoscend.Api
 {
@@ -43,11 +44,21 @@ namespace Protoscend.Api
             if (app.Environment.IsDevelopment())
                 app.MapOpenApi();
 
-            if (app.Environment.IsDevelopment())
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
-                app.UseHttpsRedirection();
-            }
+                ForwardedHeaders =
+                ForwardedHeaders.XForwardedFor |
+                ForwardedHeaders.XForwardedProto
+            });
+
+            app.UseHttpsRedirection();
+           
             app.UseCors("BlazorClient");
+
+            app.MapMethods("/api/contact", new[] { "OPTIONS" }, () =>
+            {
+                return Results.Ok();
+            });
 
             app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config) =>
             {
