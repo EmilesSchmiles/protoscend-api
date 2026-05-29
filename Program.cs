@@ -27,38 +27,30 @@ namespace Protoscend.Api
                 {
                     policy
                         .WithOrigins(
-                            "https://localhost:7094",   // Blazor WASM HTTPS
-                            "http://localhost:5084",    // Blazor WASM HTTP
-                            "https://localhost:7049",   // API self (just in case)
-                            "https://protoscend.com",        // your actual domain
-                            "https://www.protoscend.com",    // www version too
-                            "https://protoscend.co.za"       // keep if you also own this
+                            "https://protoscend.com",
+                            "https://www.protoscend.com",
+                            "https://protoscend.co.za",
+                            "https://localhost:7094",
+                            "http://localhost:5084"
                         )
                         .AllowAnyHeader()
-                        .AllowAnyMethod();
+                        .AllowAnyMethod()
+                        .AllowCredentials(); // only if needed
                 });
             });
 
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
-                app.MapOpenApi();
-
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
                 ForwardedHeaders =
-                ForwardedHeaders.XForwardedFor |
-                ForwardedHeaders.XForwardedProto
+                    ForwardedHeaders.XForwardedFor |
+                    ForwardedHeaders.XForwardedProto
             });
 
-            app.UseHttpsRedirection();
-           
+            app.UseRouting(); 
+
             app.UseCors("BlazorClient");
-
-            app.MapMethods("/api/contact", new[] { "OPTIONS" }, () =>
-            {
-                return Results.Ok();
-            });
 
             app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config) =>
             {
