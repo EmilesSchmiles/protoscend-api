@@ -23,19 +23,16 @@ namespace Protoscend.Api
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("BlazorClient", policy =>
+                options.AddDefaultPolicy(policy =>
                 {
-                    policy
-                        .WithOrigins(
-                            "https://protoscend.com",
-                            "https://www.protoscend.com",
-                            "https://protoscend.co.za",
-                            "https://localhost:7094",
-                            "http://localhost:5084"
-                        )
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials(); // only if needed
+                    policy.WithOrigins(
+                        "https://protoscend.com",
+                        "https://www.protoscend.com",
+                        "http://localhost:5000",
+                        "https://localhost:7049"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
                 });
             });
 
@@ -48,9 +45,9 @@ namespace Protoscend.Api
                     ForwardedHeaders.XForwardedProto
             });
 
-            app.UseRouting(); 
+            app.UseRouting();
 
-            app.UseCors("BlazorClient");
+            app.UseCors();
 
             app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config) =>
             {
