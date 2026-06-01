@@ -64,7 +64,7 @@ namespace Protoscend.Api
                     // 1 — Internal notification
                     await resend.EmailSendAsync(new EmailMessage
                     {
-                        From = "PROTOSCEND Website <onboarding@resend.dev>",
+                        From = "PROTOSCEND Website <noreply@protoscend.com>",
                         To = [toAddr],
                         ReplyTo = [$"{model.FirstName} {model.LastName} <{model.Email}>"],
                         Subject = $"[PROTOSCEND] New Enquiry — {model.FirstName} {model.LastName}",
@@ -74,7 +74,7 @@ namespace Protoscend.Api
                     // 2 — Auto-reply to sender
                     await resend.EmailSendAsync(new EmailMessage
                     {
-                        From = "PROTOSCEND Website <onboarding@resend.dev>",
+                        From = "PROTOSCEND Website <noreply@protoscend.com>",
                         To = [model.Email],
                         Subject = "We received your message — PROTOSCEND",
                         HtmlBody = BuildAutoReplyHtml(model)
