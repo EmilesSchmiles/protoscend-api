@@ -2,14 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Resend;
 
 namespace Protoscend.Api
 {
@@ -20,6 +18,11 @@ namespace Protoscend.Api
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddOpenApi();
+            builder.Services.AddResend(options =>
+            {
+                options.ApiToken = builder.Configuration["Resend:ApiKey"]
+                    ?? throw new Exception("Resend:ApiKey not configured");
+            });
 
             builder.Services.AddCors(options =>
             {
@@ -46,56 +49,36 @@ namespace Protoscend.Api
             });
 
             app.UseRouting();
-
             app.UseCors();
 
-            app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config) =>
+            app.MapPost("/api/contact", async (ContactRequest model, IConfiguration config, IResend resend) =>
             {
                 var errors = new List<ValidationResult>();
                 if (!Validator.TryValidateObject(model, new ValidationContext(model), errors, true))
                     return Results.BadRequest(errors.Select(e => e.ErrorMessage));
 
+                var toAddr = config["Email:To"] ?? throw new Exception("Email:To not configured");
+
                 try
                 {
-                    var smtpHost = config["Email:SmtpHost"] ?? "smtp-mail.outlook.com";
-                    var smtpPort = int.Parse(config["Email:SmtpPort"] ?? "587");
-                    var smtpUser = config["Email:Username"] ?? throw new Exception("Email:Username not configured");
-                    var smtpPass = config["Email:Password"] ?? throw new Exception("Email:Password not configured");
-                    var fromAddr = config["Email:From"] ?? smtpUser;
-                    var toAddr = config["Email:To"] ?? smtpUser;
-
-                    using var client = new SmtpClient(smtpHost, smtpPort)
+                    // 1 — Internal notification
+                    await resend.EmailSendAsync(new EmailMessage
                     {
-                        Credentials = new NetworkCredential(smtpUser, smtpPass),
-                        EnableSsl = true,
-                        DeliveryMethod = SmtpDeliveryMethod.Network
-                    };
-
-                    // 1 — Internal notification to your inbox
-                    var internalMail = new MailMessage
-                    {
-                        From = new MailAddress(fromAddr, "PROTOSCEND Website"),
+                        From = "PROTOSCEND Website <onboarding@resend.dev>",
+                        To = [toAddr],
+                        ReplyTo = [$"{model.FirstName} {model.LastName} <{model.Email}>"],
                         Subject = $"[PROTOSCEND] New Enquiry — {model.FirstName} {model.LastName}",
-                        IsBodyHtml = true,
-                        Body = BuildInternalHtml(model)
-                    };
-                    internalMail.To.Add(toAddr); 
-                    // Sets Reply-To so you can reply directly to the enquirer
-                    internalMail.ReplyToList.Add(
-                        new MailAddress(model.Email, $"{model.FirstName} {model.LastName}"));
-                    await client.SendMailAsync(internalMail);
+                        HtmlBody = BuildInternalHtml(model)
+                    });
 
-                    // 2 — Auto-reply confirmation to the sender
-                    var autoReply = new MailMessage
+                    // 2 — Auto-reply to sender
+                    await resend.EmailSendAsync(new EmailMessage
                     {
-                        From = new MailAddress(fromAddr, "PROTOSCEND Website"),
+                        From = "PROTOSCEND Website <onboarding@resend.dev>",
+                        To = [model.Email],
                         Subject = "We received your message — PROTOSCEND",
-                        IsBodyHtml = true,
-                        Body = BuildAutoReplyHtml(model)
-                    };
-                    autoReply.To.Add(
-                        new MailAddress(model.Email, $"{model.FirstName} {model.LastName}"));
-                    await client.SendMailAsync(autoReply);
+                        HtmlBody = BuildAutoReplyHtml(model)
+                    });
 
                     return Results.Ok(new { message = "Sent" });
                 }
